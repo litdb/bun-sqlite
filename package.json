@@ -19,7 +19,8 @@
     "dist"
   ],
   "keywords": [
-    "bun"
+    "bun",
+    "sqlite"
   ],
   "license": "MIT",
   "homepage": "https://github.com/litdb/db",
