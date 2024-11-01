@@ -13,7 +13,8 @@
   },
   "scripts": {
     "build": "bun run build.ts",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run build",
+    "release": "bump patch --commit --push --tag && npm publish --access public"
   },
   "files": [
     "dist"
