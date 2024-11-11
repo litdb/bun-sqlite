@@ -1,7 +1,11 @@
 import { Database, Statement as BunStatement } from "bun:sqlite"
-import type { ColumnDefinition, Driver, DbBinding, Statement, TableDefinition, TypeConverter } from "litdb"
+import type { 
+    ColumnDefinition, Driver, Connection, SyncConnection, DbBinding, Statement, TableDefinition, TypeConverter, Fragment, SyncStatement, Dialect,
+    Changes, ColumnType, Constructor,
+} from "litdb"
 import { 
-    Sql, Connection, NamingStrategy, SyncConnection, DataType, DefaultValues, converterFor, DateTimeConverter
+    Sql, DbConnection, NamingStrategy, SyncDbConnection, DefaultValues, converterFor, DateTimeConverter, 
+    DialectTypes, SqliteDialect, SqliteTypes, DefaultStrategy, Schema, IS, SqliteSchema,
 } from "litdb"
 
 const ENABLE_WAL = "PRAGMA journal_mode = WAL;"
@@ -53,7 +57,7 @@ export function connect(options?:ConnectionOptions|string) {
             strict: true 
         })
         db.exec(ENABLE_WAL)
-        return new SqliteDriver(db)
+        return new SqliteConnection(db, new Sqlite())
     }
 
     options = options || {}
@@ -64,15 +68,19 @@ export function connect(options?:ConnectionOptions|string) {
     if (options?.wal === false) {
         db.exec(ENABLE_WAL)
     }
-    return new SqliteDriver(db)
+    return new SqliteConnection(db, new Sqlite())
 }
 
 class SqliteStatement<ReturnType, ParamsType extends DbBinding[]>
-    implements Statement<ReturnType, ParamsType>
+    implements Statement<ReturnType, ParamsType>, SyncStatement<ReturnType, ParamsType>
 {
     native: BunStatement<ReturnType, ParamsType>
     constructor(statement: BunStatement<ReturnType, ParamsType>) {
         this.native = statement
+    }
+
+    as<T extends Constructor<any>>(t:T) {
+        return new SqliteStatement(this.native.as(t))
     }
 
     all(...params: ParamsType): Promise<ReturnType[]> {
@@ -81,10 +89,10 @@ class SqliteStatement<ReturnType, ParamsType extends DbBinding[]>
     allSync(...params: ParamsType): ReturnType[] {
         return this.native.all(...params)
     }
-    first(...params: ParamsType): Promise<ReturnType | null> {
+    one(...params: ParamsType): Promise<ReturnType | null> {
         return Promise.resolve(this.native.get(...params))
     }
-    firstSync(...params: ParamsType): ReturnType | null {
+    oneSync(...params: ParamsType): ReturnType | null {
         return this.native.get(...params)
     }
 
@@ -95,10 +103,10 @@ class SqliteStatement<ReturnType, ParamsType extends DbBinding[]>
         return this.native.values(...params).map(row => row[0] as ReturnValue)
     }
 
-    scalar<ReturnValue>(...params: ParamsType): Promise<ReturnValue | null> {
+    value<ReturnValue>(...params: ParamsType): Promise<ReturnValue | null> {
         return Promise.resolve(this.native.values(...params).map(row => row[0] as ReturnValue)?.[0] ?? null)
     }
-    scalarSync<ReturnValue>(...params: ParamsType): ReturnValue | null {
+    valueSync<ReturnValue>(...params: ParamsType): ReturnValue | null {
         return this.native.values(...params).map(row => row[0] as ReturnValue)?.[0] ?? null
     }
 
@@ -115,43 +123,32 @@ class SqliteStatement<ReturnType, ParamsType extends DbBinding[]>
         return this.native.values(...params)?.[0] ?? null
     }
 
-    exec(...params: ParamsType): Promise<{ changes: number; lastInsertRowid: number | bigint; }> {
+    exec(...params: ParamsType): Promise<Changes> {
         //console.log('params',params)
         return Promise.resolve(this.native.run(...params))
     }
-    execSync(...params: ParamsType): { changes: number; lastInsertRowid: number | bigint; } {
+    execSync(...params: ParamsType): Changes {
         //console.log('params',params)
-        return this.native.run(...params)
-    }    
-}
+        const ret = this.native.run(...params)
+        // console.log('ret',ret)
+        return ret
+    }
 
-class Types {
-    // SQLite aliases, use as-is
-    static NATIVE = [
-        DataType.INTEGER, DataType.SMALLINT, DataType.BIGINT, // INTEGER
-        DataType.REAL, DataType.DOUBLE, DataType.FLOAT,  // REAL
-        DataType.NUMERIC, DataType.DECIMAL, DataType.BOOLEAN, DataType.DATE, DataType.DATETIME, //NUMERIC
-    ]
-    static map = {
-        INTEGER: [DataType.INTERVAL],
-        REAL:    [DataType.REAL],
-        NUMERIC: [DataType.DECIMAL, DataType.NUMERIC, DataType.MONEY],
-        BLOB:    [DataType.BLOB, DataType.BYTES, DataType.BIT],
-        TEXT: [
-            DataType.UUID, DataType.JSON, DataType.JSONB, DataType.XML, 
-            DataType.TIME, DataType.TIMEZ, DataType.TIMESTAMP, DataType.TIMESTAMPZ,
-        ],
+    run(...params: ParamsType): Promise<void> {
+        return Promise.resolve(this.native.run(...params)).then(x => undefined)
+    }
+    runSync(...params: ParamsType):void {
+        this.native.run(...params)
     }
 }
 
-class SqliteDriver implements Driver
+class Sqlite implements Driver
 {
-    db:Database
-    async: Connection
-    sync: SyncConnection
     name: string
+    dialect:Dialect
+    schema:Schema
     $:ReturnType<typeof Sql.create>
-    strategy:NamingStrategy = new NamingStrategy()
+    strategy:NamingStrategy = new DefaultStrategy()
     variables: { [key: string]: string } = {
         [DefaultValues.NOW]: 'CURRENT_TIMESTAMP',
         [DefaultValues.MAX_TEXT]: 'TEXT',
@@ -159,17 +156,18 @@ class SqliteDriver implements Driver
         [DefaultValues.TRUE]: '1',
         [DefaultValues.FALSE]: '0',
     }
+    types: DialectTypes
 
     converters: { [key: string]: TypeConverter } = {
-        ...converterFor(DateTimeConverter.instance, DataType.DATE, DataType.DATETIME, DataType.TIMESTAMP, DataType.TIMESTAMPZ),
+        ...converterFor(DateTimeConverter.instance, "DATE", "DATETIME", "TIMESTAMP", "TIMESTAMPZ"),
     }
 
-    constructor(db:Database) {
-        this.db = db
-        this.$ = Sql.create(this)
-        this.async = new Connection(this)
-        this.sync = new SyncConnection(this)
+    constructor() {
+        this.dialect = new SqliteDialect()
+        this.$ = this.dialect.$
         this.name = this.constructor.name
+        this.schema = this.$.schema = new SqliteSchema(this)
+        this.types = new SqliteTypes()
     }
 
     quote(name: string): string { return `"${name}"` }
@@ -188,12 +186,12 @@ class SqliteDriver implements Driver
     }
 
     sqlColumnDefinition(column: ColumnDefinition): string {
-        let dataType = column.type as DataType
-        let type = Types.NATIVE.includes(dataType) ? dataType : undefined
+        let dataType = column.type
+        let type = this.types.native.includes(dataType as ColumnType) ? dataType : undefined
         if (!type) {
-            for (const [sqliteType, typeMapping] of Object.entries(Types.map)) {
-                if (typeMapping.includes(dataType)) {
-                    type = sqliteType as DataType
+            for (const [sqliteType, typeMapping] of Object.entries(this.types.map)) {
+                if (typeMapping.includes(dataType as ColumnType)) {
+                    type = sqliteType
                     break
                 }
             }
@@ -220,28 +218,62 @@ class SqliteDriver implements Driver
         return sb
     }
 
-    sqlLimit(skip?: number, take?: number): string {
-        return skip == null && take == null
-            ? '' 
-            : skip
-                ? `LIMIT ${take} OFFSET ${skip}`
-                : `LIMIT ${take}`
+    sqlLimit(offset?: number, limit?: number): Fragment {
+        if (offset == null && limit == null)
+            throw new Error(`Invalid argument sqlLimit(${offset}, ${limit})`)
+        const frag = offset
+            ? this.$.fragment(`LIMIT $limit OFFSET $offset`, { offset, limit:limit ?? -1 })
+            : this.$.fragment(`LIMIT $limit`, { limit })
+        return frag
+    }
+}
+
+class SqliteConnection implements Connection, SyncConnection {
+    $:ReturnType<typeof Sql.create>
+    async: DbConnection
+    sync: SyncDbConnection
+    schema: Schema
+    dialect: Dialect
+
+    constructor(public db:Database, public driver:Driver & {
+        $:ReturnType<typeof Sql.create>
+    }) {
+        this.$ = driver.$
+        this.schema = this.$.schema = driver.schema
+        this.dialect = driver.dialect
+        this.async = new DbConnection(this)
+        this.sync = new SyncDbConnection(this)
     }
 
-    prepareRaw<ReturnType, ParamsType extends DbBinding | DbBinding[]>(sql: string) 
+    prepare<ReturnType, ParamsType extends DbBinding[]>(sql:TemplateStringsArray|string, ...params: DbBinding[])
         : Statement<ReturnType, ParamsType extends any[] ? ParamsType : [ParamsType]> {
-        return new SqliteStatement(this.db.query<ReturnType, ParamsType>(sql))
-    }
-    
-    prepare<ReturnType, ParamsType extends DbBinding[]>(strings: TemplateStringsArray, ...params: DbBinding[])
-        : Statement<ReturnType, ParamsType extends any[] ? ParamsType : [ParamsType]> {
-        let sb = ''
-        for (let i = 0; i < strings.length; i++) {
-            sb += strings[i]
-            if (i < params.length) {
-                sb += `?${i+1}`
+        if (IS.tpl(sql)) {
+            let sb = ''
+            for (let i = 0; i < sql.length; i++) {
+                sb += sql[i]
+                if (i < params.length) {
+                    sb += `?${i+1}`
+                }
             }
+            return new SqliteStatement(this.db.query<ReturnType, ParamsType>(sb))
+        } else {
+            return new SqliteStatement(this.db.query<ReturnType, ParamsType>(sql))
         }
-        return new SqliteStatement(this.db.query<ReturnType, ParamsType>(sb))
+    }
+
+    prepareSync<ReturnType, ParamsType extends DbBinding[]>(sql:TemplateStringsArray|string, ...params: DbBinding[])
+        : SyncStatement<ReturnType, ParamsType extends any[] ? ParamsType : [ParamsType]> {
+        if (IS.tpl(sql)) {
+            let sb = ''
+            for (let i = 0; i < sql.length; i++) {
+                sb += sql[i]
+                if (i < params.length) {
+                    sb += `?${i+1}`
+                }
+            }
+            return new SqliteStatement(this.db.query<ReturnType, ParamsType>(sb))
+        } else {
+            return new SqliteStatement(this.db.query<ReturnType, ParamsType>(sql))
+        }
     }
 }

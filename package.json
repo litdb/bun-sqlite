@@ -1,41 +1,41 @@
 {
   "name": "@litdb/bun-sqlite",
-  "type": "module",
   "version": "0.0.1",
+  "author": "Demis Bellot <https://github.com/mythz>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/litdb/bun-sqlite.git"
+  },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "description": "",
+  "devDependencies": {
+    "bun-plugin-dts": "^0.3.0",
+    "@types/bun": "^1.1.10"
+  },
   "exports": {
     "types": "./dist/index.d.ts",
     "import": "./dist/index.js",
     "require": "./dist/index.cjs"
   },
-  "scripts": {
-    "build": "bun run build.ts",
-    "prepublishOnly": "bun run build",
-    "release": "bump patch --commit --push --tag && npm publish --access public"
-  },
+  "bugs": "https://github.com/litdb/litdb/issues",
+  "description": "",
   "files": [
     "dist"
   ],
+  "homepage": "https://github.com/litdb/litdb",
   "keywords": [
     "sqlite",
     "bun"
   ],
   "license": "BSD-3-Clause",
-  "homepage": "https://github.com/litdb/litdb",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/litdb/bun-sqlite.git"
+  "scripts": {
+    "build": "bun run build.ts",
+    "prepublishOnly": "bun run build",
+    "release": "bump patch --commit --push --tag && npm publish --access public"
   },
-  "bugs": "https://github.com/litdb/litdb/issues",
-  "author": "Demis Bellot <https://github.com/mythz>",
-  "devDependencies": {
-    "bun-plugin-dts": "^0.3.0",
-    "@types/bun": "^1.1.10"
-  },
+  "type": "module",
+  "types": "./dist/index.d.ts",
   "dependencies": {
-    "litdb": "^0.0.3"
+    "litdb": "^0.0.10"
   }
 }

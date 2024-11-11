@@ -1,52 +1,54 @@
-import { DataType, table, column, DefaultValues, Table } from "litdb"
+import { table, column, DefaultValues, Table } from "litdb"
 
 @table()
 export class Contact {
     constructor(data?: Partial<Contact>) { Object.assign(this, data) }
 
-    @column(DataType.INTEGER, { autoIncrement: true })
-    id: number = 0
+    @column("INTEGER", { autoIncrement: true })
+    id = 0
     
-    @column(DataType.TEXT, { required: true })
-    firstName: string = ''
+    @column("TEXT", { required: true })
+    firstName = ''
     
-    @column(DataType.TEXT, { required: true })
-    lastName: string = ''
+    @column("TEXT", { required: true })
+    lastName = ''
     
-    @column(DataType.INTEGER)
+    @column("INTEGER")
     age?: number
     
-    @column(DataType.TEXT, { required: true })
-    email: string = ''
+    @column("TEXT", { required: true })
+    email = ''
     
-    @column(DataType.TEXT)
+    @column("TEXT")
     phone?: string
     
-    @column(DataType.TEXT)
+    @column("TEXT")
     address?: string
     
-    @column(DataType.TEXT)
+    @column("TEXT")
     city?: string
     
-    @column(DataType.TEXT)
+    @column("TEXT")
     state?: string
     
-    @column(DataType.TEXT)
+    @column("TEXT")
     postCode?: string
     
-    @column(DataType.DATETIME, { defaultValue:DefaultValues.NOW })
-    createdAt: Date = new Date()
+    @column("DATETIME", { defaultValue:DefaultValues.NOW })
+    createdAt = new Date(2025,1,1)
     
-    @column(DataType.DATETIME, { defaultValue:DefaultValues.NOW })
-    updatedAt: Date = new Date()
+    @column("DATETIME", { defaultValue:DefaultValues.NOW })
+    updatedAt = new Date(2025,1,1)
 }
 
 @table()
 export class Order {
+    constructor(data?: Partial<Order>) { Object.assign(this, data) }
+
     @column("INTEGER", { autoIncrement:true })
     id: number = 0
 
-    @column("INTEGER", { required:true })
+    @column("INTEGER", { required:true, references:{ table:Contact, on:["DELETE","CASCADE"] } })
     contactId: number = 0
 
     @column("INTEGER")
@@ -62,6 +64,12 @@ export class Order {
     total: number = 0
 }
 
+Table(Order, {
+    columns: {
+        contactId: { type:"TEXT", references:{ table:Contact, on:["DELETE","CASCADE"] } }
+    }
+})
+
 @table()
 export class OrderItem {
     @column("INTEGER", { autoIncrement:true })
@@ -70,7 +78,7 @@ export class OrderItem {
     @column("INTEGER", { required:true })
     orderId: number = 0
 
-    @column(DataType.TEXT, { required:true })
+    @column("TEXT", { required:true })
     name: string = ''
 }
 
@@ -79,7 +87,7 @@ export class Freight {
     @column("INTEGER", { autoIncrement:true })
     id: number = 0
 
-    @column(DataType.TEXT, { required:true })
+    @column("TEXT", { required:true })
     name: string = ''
 }
 
@@ -88,6 +96,7 @@ export const contacts = [
         id: 1,
         firstName: 'John',
         lastName: 'Doe',
+        age: 27,
         email: 'john.doe@example.com',
         phone: '123-456-7890',
         address: '123 Main St',
@@ -99,6 +108,7 @@ export const contacts = [
         id: 2,
         firstName: 'Jane',
         lastName: 'Smith',
+        age: 27,
         email: 'jane.smith@example.com',
         phone: '098-765-4321',
         address: '456 Elm St',
@@ -110,6 +120,7 @@ export const contacts = [
         id: 3,
         firstName: 'Alice',
         lastName: 'Johnson',
+        age: 21,
         email: 'alice.johnson@example.com',
         phone: '555-123-4567',
         address: '789 Oak St',
@@ -121,6 +132,7 @@ export const contacts = [
         id: 4,
         firstName: 'Bob',
         lastName: 'Williams',
+        age: 40,
         email: 'bob.williams@example.com',
         phone: '111-222-3333',
         address: '321 Pine St',
@@ -132,6 +144,7 @@ export const contacts = [
         id: 5,
         firstName: 'Charlie',
         lastName: 'Brown',
+        age: 50,
         email: 'charlie.brown@example.com',
         phone: '999-888-7777',
         address: '654 Cedar St',
@@ -172,7 +185,7 @@ Table(DynamicPerson, {
         key: { alias: 'id', type:"TEXT", required:true },
         name: { alias: 'firstName', type:"TEXT", required:true },
         surname: { alias: 'lastName', type:"TEXT", required:true },
-        email: { type:"TEXT", required:true },
+        email: { type:"TEXT", required:true },    
     }
 })
 
@@ -184,3 +197,35 @@ export const people = contacts.map(c => new Person({
 }))
 
 export const dynamicPeople = people.map(c => new DynamicPerson(c))
+
+export function customerOrderTables() {
+    @table() class Product {
+        constructor(data?: Partial<Product>) { Object.assign(this, data) }
+        @column("INTEGER", { autoIncrement:true, alias:'sku' }) id = ''
+        @column("TEXT",    { required:true }) name = ''
+        @column("MONEY",   { required:true }) cost = 0.0
+    }
+    @table() class Contact {
+        constructor(data?: Partial<Contact>) { Object.assign(this, data) }
+        @column("INTEGER",  { autoIncrement:true }) id = 0
+        @column("TEXT",     { required:true }) name = ''
+        @column("TEXT",     { required:true, index:true, unique:true }) email = ''
+        @column("DATETIME", { defaultValue:"CURRENT_TIMESTAMP" }) createdAt = new Date()
+    }
+    @table() class Order {
+        constructor(data?: Partial<Order>) { Object.assign(this, data) }
+        @column("INTEGER",  { autoIncrement:true }) id = 0
+        @column("INTEGER",  { references:{ table:Contact, on:["DELETE","CASCADE"] } }) contactId = 0
+        @column("MONEY")    total = 0.0
+        @column("DATETIME", { defaultValue:"CURRENT_TIMESTAMP" }) createdAt = new Date()
+    }
+    @table() class OrderItem {
+        constructor(data?: Partial<OrderItem>) { Object.assign(this, data) }
+        @column("INTEGER", { autoIncrement:true }) id = 0
+        @column("INTEGER", { references:{ table:Order, on:["DELETE","RESTRICT"] } }) orderId = 0
+        @column("INTEGER", { references:{ table:Product } }) sku = ''
+        @column("INTEGER") qty = 0
+        @column("MONEY")   total = 0.0
+    }
+    return { Product, Contact, Order, OrderItem }
+}

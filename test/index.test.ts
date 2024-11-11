@@ -12,7 +12,7 @@ describe('SQLite Driver Tests', () => {
 
     it ('should be able to run a test', () => {
         let getContact = (id:number) => 
-            db.single<Contact>`select firstName, lastName from Contact where id = ${id}`
+            db.one<Contact>`select firstName, lastName from Contact where id = ${id}`
 
         let contact = getContact(1)!
         console.log('contact', contact)
