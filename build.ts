@@ -9,8 +9,9 @@ const defaultBuildConfig: BuildConfig = {
 await Promise.all([
   Bun.build({
     ...defaultBuildConfig,
+    target: "bun",
     plugins: [dts()],
     format: 'esm',
     naming: "[dir]/[name].js",
-  })
+  }),
 ])

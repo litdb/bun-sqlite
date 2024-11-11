@@ -38,6 +38,7 @@
     "@types/bun": "^1.1.13"
   },
   "dependencies": {
+    "@types/node": "^22.9.0",
     "litdb": "^0.0.11"
   }
 }

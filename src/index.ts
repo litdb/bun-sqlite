@@ -71,7 +71,7 @@ export function connect(options?:ConnectionOptions|string) {
     return new SqliteConnection(db, new Sqlite())
 }
 
-class SqliteStatement<ReturnType, ParamsType extends DbBinding[]>
+export class SqliteStatement<ReturnType, ParamsType extends DbBinding[]>
     implements Statement<ReturnType, ParamsType>, SyncStatement<ReturnType, ParamsType>
 {
     native: BunStatement<ReturnType, ParamsType>
@@ -142,7 +142,7 @@ class SqliteStatement<ReturnType, ParamsType extends DbBinding[]>
     }
 }
 
-class Sqlite implements Driver
+export class Sqlite implements Driver
 {
     name: string
     dialect:Dialect
@@ -228,7 +228,7 @@ class Sqlite implements Driver
     }
 }
 
-class SqliteConnection implements Connection, SyncConnection {
+export class SqliteConnection implements Connection, SyncConnection {
     $:ReturnType<typeof Sql.create>
     async: DbConnection
     sync: SyncDbConnection
