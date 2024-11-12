@@ -39,6 +39,6 @@
   },
   "dependencies": {
     "@types/node": "^22.9.0",
-    "litdb": "^0.0.11"
+    "litdb": "^0.0.12"
   }
 }
