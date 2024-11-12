@@ -12,7 +12,7 @@ const ENABLE_WAL = "PRAGMA journal_mode = WAL;"
 
 type ConnectionOptions = {
     /**
-     * Whether to enable WAL
+     * Creates a new database connection to the specified SQLite DB. If the database file does not exist, it is created.
      * @default "app.db"
      */
     fileName?:string
@@ -71,11 +71,11 @@ export function connect(options?:ConnectionOptions|string) {
     return new SqliteConnection(db, new Sqlite())
 }
 
-export class SqliteStatement<ReturnType, ParamsType extends DbBinding[]>
-    implements Statement<ReturnType, ParamsType>, SyncStatement<ReturnType, ParamsType>
+export class SqliteStatement<RetType, ParamsType extends DbBinding[]>
+    implements Statement<RetType, ParamsType>, SyncStatement<RetType, ParamsType>
 {
-    native: BunStatement<ReturnType, ParamsType>
-    constructor(statement: BunStatement<ReturnType, ParamsType>) {
+    native: BunStatement<RetType, ParamsType>
+    constructor(statement: BunStatement<RetType, ParamsType>) {
         this.native = statement
     }
 
@@ -83,16 +83,16 @@ export class SqliteStatement<ReturnType, ParamsType extends DbBinding[]>
         return new SqliteStatement(this.native.as(t))
     }
 
-    all(...params: ParamsType): Promise<ReturnType[]> {
+    all(...params: ParamsType): Promise<RetType[]> {
         return Promise.resolve(this.native.all(...params))
     }
-    allSync(...params: ParamsType): ReturnType[] {
+    allSync(...params: ParamsType): RetType[] {
         return this.native.all(...params)
     }
-    one(...params: ParamsType): Promise<ReturnType | null> {
+    one(...params: ParamsType): Promise<RetType | null> {
         return Promise.resolve(this.native.get(...params))
     }
-    oneSync(...params: ParamsType): ReturnType | null {
+    oneSync(...params: ParamsType): RetType | null {
         return this.native.get(...params)
     }
 
@@ -222,8 +222,8 @@ export class Sqlite implements Driver
         if (offset == null && limit == null)
             throw new Error(`Invalid argument sqlLimit(${offset}, ${limit})`)
         const frag = offset
-            ? this.$.fragment(`LIMIT $limit OFFSET $offset`, { offset, limit:limit ?? -1 })
-            : this.$.fragment(`LIMIT $limit`, { limit })
+            ? this.$.sql(`LIMIT $limit OFFSET $offset`, { offset, limit:limit ?? -1 })
+            : this.$.sql(`LIMIT $limit`, { limit })
         return frag
     }
 }
@@ -245,8 +245,8 @@ export class SqliteConnection implements Connection, SyncConnection {
         this.sync = new SyncDbConnection(this)
     }
 
-    prepare<ReturnType, ParamsType extends DbBinding[]>(sql:TemplateStringsArray|string, ...params: DbBinding[])
-        : Statement<ReturnType, ParamsType extends any[] ? ParamsType : [ParamsType]> {
+    prepare<RetType, ParamsType extends DbBinding[]>(sql:TemplateStringsArray|string, ...params: DbBinding[])
+        : Statement<RetType, ParamsType extends any[] ? ParamsType : [ParamsType]> {
         if (IS.tpl(sql)) {
             let sb = ''
             for (let i = 0; i < sql.length; i++) {
@@ -255,14 +255,14 @@ export class SqliteConnection implements Connection, SyncConnection {
                     sb += `?${i+1}`
                 }
             }
-            return new SqliteStatement(this.db.query<ReturnType, ParamsType>(sb))
+            return new SqliteStatement(this.db.query<RetType, ParamsType>(sb))
         } else {
-            return new SqliteStatement(this.db.query<ReturnType, ParamsType>(sql))
+            return new SqliteStatement(this.db.query<RetType, ParamsType>(sql))
         }
     }
 
-    prepareSync<ReturnType, ParamsType extends DbBinding[]>(sql:TemplateStringsArray|string, ...params: DbBinding[])
-        : SyncStatement<ReturnType, ParamsType extends any[] ? ParamsType : [ParamsType]> {
+    prepareSync<RetType, ParamsType extends DbBinding[]>(sql:TemplateStringsArray|string, ...params: DbBinding[])
+        : SyncStatement<RetType, ParamsType extends any[] ? ParamsType : [ParamsType]> {
         if (IS.tpl(sql)) {
             let sb = ''
             for (let i = 0; i < sql.length; i++) {
@@ -271,9 +271,9 @@ export class SqliteConnection implements Connection, SyncConnection {
                     sb += `?${i+1}`
                 }
             }
-            return new SqliteStatement(this.db.query<ReturnType, ParamsType>(sb))
+            return new SqliteStatement(this.db.query<RetType, ParamsType>(sb))
         } else {
-            return new SqliteStatement(this.db.query<ReturnType, ParamsType>(sql))
+            return new SqliteStatement(this.db.query<RetType, ParamsType>(sql))
         }
     }
 }
