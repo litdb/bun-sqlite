@@ -5,7 +5,7 @@
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "description": "",
+  "description": "litdb driver for bun:sqlite",
   "exports": {
     "types": "./dist/index.d.ts",
     "import": "./dist/index.js"
@@ -39,6 +39,6 @@
   },
   "dependencies": {
     "@types/node": "^22.9.0",
-    "litdb": "^0.0.12"
+    "litdb": "^0.0.13"
   }
 }
