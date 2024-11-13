@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'bun:test'
 import { contacts, Contact, Order } from './data'
 import { sync as db, $ } from './db'
-import { useFilter, omit, pick, } from 'litdb'
+import { useFilterSync, omit, pick, } from 'litdb'
 
 const recreateContacts = () => {
     db.dropTable(Contact)
@@ -61,7 +61,7 @@ describe('SQLite Driver Tests', () => {
 
     it ('does Filter prepareSync', () => {
         const sqls:string[] = []
-        const sub = useFilter(db, sql => sqls.push(sql[0]))
+        const sub = useFilterSync(db, sql => sqls.push(sql[0]))
         db.one`SELECT 1`
         db.one`SELECT 2`
         expect(sqls).toEqual(['SELECT 1', 'SELECT 2'])
@@ -73,7 +73,7 @@ describe('SQLite Driver Tests', () => {
     it ('does CRUD Contact Table', () => {
 
         var sub:any = null
-        // const sub = useFilter(db, sql => console.log(sql))
+        // const sub = useFilterSync(db, sql => console.log(sql))
         
         db.dropTable(Contact)
 
