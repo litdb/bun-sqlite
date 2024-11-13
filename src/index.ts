@@ -1,4 +1,4 @@
-import { Database, Statement as BunStatement } from "bun:sqlite"
+import { Database, Statement as DriverStatement } from "bun:sqlite"
 import type { 
     ColumnDefinition, Driver, Connection, SyncConnection, DbBinding, Statement, TableDefinition, TypeConverter, Fragment, SyncStatement, Dialect,
     Changes, ColumnType, Constructor,
@@ -74,8 +74,8 @@ export function connect(options?:ConnectionOptions|string) {
 export class SqliteStatement<RetType, ParamsType extends DbBinding[]>
     implements Statement<RetType, ParamsType>, SyncStatement<RetType, ParamsType>
 {
-    native: BunStatement<RetType, ParamsType>
-    constructor(statement: BunStatement<RetType, ParamsType>) {
+    native: DriverStatement<RetType, ParamsType>
+    constructor(statement: DriverStatement<RetType, ParamsType>) {
         this.native = statement
     }
 
