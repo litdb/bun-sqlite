@@ -16,8 +16,10 @@ bun install @litdb/bun-sqlite
 import { connect } from "@litdb/bun-sqlite"
 
 export const connection = connect("app.db")
-export const { $, async, sync } = connection
+export const { $, sync:db, async, native } = connection
 ```
+
+> When needed use `native` to access underlying `bun:sqlite` driver
 
 **app.ts**
 
