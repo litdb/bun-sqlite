@@ -177,7 +177,7 @@ export class SqliteConnection implements Connection, SyncConnection {
     schema: Schema
     dialect: Dialect
 
-    constructor(public db:Database, public driver:Driver & {
+    constructor(public native:Database, public driver:Driver & {
         $:ReturnType<typeof Sql.create>
     }) {
         this.$ = driver.$
@@ -197,9 +197,9 @@ export class SqliteConnection implements Connection, SyncConnection {
                     sb += `?${i+1}`
                 }
             }
-            return new SqliteStatement(this.db.query<RetType, ParamsType>(sb))
+            return new SqliteStatement(this.native.query<RetType, ParamsType>(sb))
         } else {
-            return new SqliteStatement(this.db.query<RetType, ParamsType>(sql))
+            return new SqliteStatement(this.native.query<RetType, ParamsType>(sql))
         }
     }
 
@@ -213,18 +213,18 @@ export class SqliteConnection implements Connection, SyncConnection {
                     sb += `?${i+1}`
                 }
             }
-            return new SqliteStatement(this.db.query<RetType, ParamsType>(sb))
+            return new SqliteStatement(this.native.query<RetType, ParamsType>(sb))
         } else {
-            return new SqliteStatement(this.db.query<RetType, ParamsType>(sql))
+            return new SqliteStatement(this.native.query<RetType, ParamsType>(sql))
         }
     }
 
     close() { 
-        this.db.close()
+        this.native.close()
         return Promise.resolve() 
     }
 
     closeSync() {
-        this.db.close()
+        this.native.close()
     }
 }

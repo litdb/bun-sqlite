@@ -15,7 +15,7 @@ bun install @litdb/bun-sqlite
 ```ts
 import { connect } from "@litdb/bun-sqlite"
 
-export const connection = connect("app.db")
+export const connection = connect("app.db") // WAL enabled by default
 export const { $, sync:db, async, native } = connection
 ```
 
