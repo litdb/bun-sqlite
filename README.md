@@ -22,7 +22,7 @@ export const { $, async, sync } = connection
 **app.ts**
 
 ```ts
-import { $, sync as db } from "./db"
+import { $, db } from "./db"
 import { Contact } from "./models"
 
 db.dropTable(Contact)

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'bun:test'
 import { contacts, Contact, Order } from './data'
-import { sync as db, $ } from './db'
+import { $, db } from './db'
 import { useFilterSync, omit, pick, } from 'litdb'
 
 const recreateContacts = () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'bun:test'
 import { contacts, Contact } from './data'
-import { sync as db } from './db'
+import { db } from './db'
 
 describe('SQLite Driver Tests', () => {
 
