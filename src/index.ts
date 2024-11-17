@@ -1,6 +1,7 @@
 import { Database, Statement as DriverStatement } from "bun:sqlite"
 import type { 
     Driver, Connection, SyncConnection, DbBinding, Statement, SyncStatement, Dialect, Changes, Constructor,
+    ClassParam,
 } from "litdb"
 import { 
     Sql, DbConnection, NamingStrategy, SyncDbConnection, SqliteDialect, SqliteTypes, DefaultStrategy, Schema, 
@@ -11,7 +12,7 @@ const ENABLE_WAL = "PRAGMA journal_mode = WAL;"
 
 type ConnectionOptions = {
     /**
-     * Creates a new database connection to the specified SQLite DB. If the database file does not exist, it is created.
+     * Whether to enable WAL
      * @default "app.db"
      */
     fileName?:string
@@ -70,29 +71,34 @@ export function connect(options?:ConnectionOptions|string) {
     return new SqliteConnection(db, new Sqlite())
 }
 
-export class SqliteStatement<RetType, ParamsType extends DbBinding[]>
+class SqliteStatement<RetType, ParamsType extends DbBinding[]>
     implements Statement<RetType, ParamsType>, SyncStatement<RetType, ParamsType>
 {
     native: DriverStatement<RetType, ParamsType>
-    constructor(statement: DriverStatement<RetType, ParamsType>) {
+    $:ReturnType<typeof Sql.create>
+    _as?:RetType
+    constructor(statement: DriverStatement<RetType, ParamsType>, $:ReturnType<typeof Sql.create>) {
         this.native = statement
+        this.$ = $
     }
 
     as<T extends Constructor<any>>(t:T) {
-        return new SqliteStatement(this.native.as(t))
+        const clone = new SqliteStatement(this.native.as(t), this.$)
+        clone._as = t
+        return clone
     }
 
     all(...params: ParamsType): Promise<RetType[]> {
-        return Promise.resolve(this.native.all(...params))
+        return Promise.resolve(this.all(...params))
     }
     allSync(...params: ParamsType): RetType[] {
-        return this.native.all(...params)
+        return this.native.all(...params).map(x => this.$.schema.toResult(x, this._as as ClassParam))
     }
-    one(...params: ParamsType): Promise<RetType | null> {
-        return Promise.resolve(this.native.get(...params))
+    one(...params:ParamsType): Promise<RetType | null> {
+        return Promise.resolve(this.oneSync(...params))
     }
     oneSync(...params: ParamsType): RetType | null {
-        return this.native.get(...params)
+        return this.$.schema.toResult(this.native.get(...params), this._as as ClassParam)
     }
 
     column<ReturnValue>(...params: ParamsType): Promise<ReturnValue[]> {
@@ -141,7 +147,7 @@ export class SqliteStatement<RetType, ParamsType extends DbBinding[]>
     }
 }
 
-export class Sqlite implements Driver
+class Sqlite implements Driver
 {
     name: string
     dialect:Dialect
@@ -157,7 +163,7 @@ export class Sqlite implements Driver
     }
 }
 
-export class SqliteConnection implements Connection, SyncConnection {
+class SqliteConnection implements Connection, SyncConnection {
     $:ReturnType<typeof Sql.create>
     async: DbConnection
     sync: SyncDbConnection
@@ -184,9 +190,9 @@ export class SqliteConnection implements Connection, SyncConnection {
                     sb += `?${i+1}`
                 }
             }
-            return new SqliteStatement(this.native.query<RetType, ParamsType>(sb))
+            return new SqliteStatement(this.native.query<RetType, ParamsType>(sb), this.$)
         } else {
-            return new SqliteStatement(this.native.query<RetType, ParamsType>(sql))
+            return new SqliteStatement(this.native.query<RetType, ParamsType>(sql), this.$)
         }
     }
 
@@ -200,17 +206,16 @@ export class SqliteConnection implements Connection, SyncConnection {
                     sb += `?${i+1}`
                 }
             }
-            return new SqliteStatement(this.native.query<RetType, ParamsType>(sb))
+            return new SqliteStatement(this.native.query<RetType, ParamsType>(sb), this.$)
         } else {
-            return new SqliteStatement(this.native.query<RetType, ParamsType>(sql))
+            return new SqliteStatement(this.native.query<RetType, ParamsType>(sql), this.$)
         }
     }
 
-    close() { 
+    close() {        
         this.native.close()
-        return Promise.resolve() 
+        return Promise.resolve()
     }
-
     closeSync() {
         this.native.close()
     }
