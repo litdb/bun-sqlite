@@ -77,6 +77,7 @@ class SqliteStatement<RetType, ParamsType extends DbBinding[]>
     native: DriverStatement<RetType, ParamsType>
     $:ReturnType<typeof Sql.create>
     _as?:RetType
+    
     constructor(statement: DriverStatement<RetType, ParamsType>, $:ReturnType<typeof Sql.create>) {
         this.native = statement
         this.$ = $
