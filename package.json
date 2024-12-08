@@ -40,6 +40,6 @@
     "bun-plugin-dts": "^0.3.0"
   },
   "dependencies": {
-    "litdb": "^0.0.25"
+    "litdb": "^0.0.27"
   }
 }
